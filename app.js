@@ -147,6 +147,14 @@ app.post("/webhook", (req, res) => {
       });
 
       break;
+
+    case "action_no":
+      User.findOneAndRemove({ _id: id }).then(() => {
+        console.log("se ha borrado el usuario correctamente");
+      });
+
+      res.json({});
+      break;
   }
 });
 
