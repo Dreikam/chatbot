@@ -5,6 +5,26 @@ const axios = require("axios");
 
 const app = express();
 
+let date = new Date();
+
+let day = date.getDate();
+let month = date.getMonth() + 1;
+let year = date.getFullYear();
+
+let hours = date.getHours();
+let minutes = date.getMinutes();
+let seconds = date.getSeconds();
+
+const time = `${hours}:${minutes}:${seconds}`;
+
+const today = `${day}-0${month}-${year}`;
+
+const complete = time + " / " + today;
+
+var id;
+
+//console.log(complete);
+
 app.use(express.json());
 
 // // Conexion a la DB
@@ -19,7 +39,7 @@ mongoose
     useNewUrlParser: true,
     useUnifiedTopology: true,
   })
-  .then((db) => console.log("Base de datos Lista"))
+  .then((db) => console.log("Base de datos conectada"))
   .catch((err) => console.error(err));
 // // Fin del codigo de conexion
 
@@ -31,6 +51,7 @@ const userSchema = mongoose.Schema({
   dni: Number,
   email: String,
   sesion: String,
+  fecha: String,
 });
 
 const User = mongoose.model("users", userSchema);
@@ -48,8 +69,6 @@ app.get("/users", async (req, res) => {
 
 //  Switch para respuestas en cada caso
 app.post("/webhook", (req, res) => {
-  // console.log(req.body);
-
   const query = req.body.queryResult;
   const action = query.action;
 
@@ -76,8 +95,10 @@ app.post("/webhook", (req, res) => {
             email: "",
             dni: dni,
             sesion: session,
+            fecha: complete,
           });
           user.save();
+          id = user._id;
         }
       });
 
@@ -86,25 +107,19 @@ app.post("/webhook", (req, res) => {
     case "action_name":
       const name = query.parameters.name;
 
-      User.findOne({ sesion: session }).then((user) => {
-        if (user) {
-          user.nombre = name;
-          user.save();
-        }
-        console.log(user);
+      User.findOne({ _id: id }).then((user) => {
+        user.nombre = name;
+        user.save();
       });
       res.json({});
       break;
 
-      case "action_city":
+    case "action_city":
       const city = query.parameters.city;
 
-      User.findOne({ sesion: session }).then((user) => {
-        if (user) {
-          user.ciudad = city;
-          user.save();
-        }
-        console.log(user);
+      User.findOne({ _id: id }).then((user) => {
+        user.ciudad = city;
+        user.save();
       });
       res.json({});
       break;
@@ -112,51 +127,25 @@ app.post("/webhook", (req, res) => {
     case "action_country":
       const country = query.parameters.country;
 
-      User.findOne({ sesion: session }).then((user) => {
-        if (user) {
-          user.pais = country;
-          user.save();
-        }
-        console.log(user);
+      User.findOne({ _id: id }).then((user) => {
+        user.pais = country;
+        user.save();
       });
       res.json({});
       break;
 
-      case 'action_email':
-        const re =/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const email = query.parameters.email;
+    case "action_email":
+      const email = query.parameters.email;
 
-        const valid = re.test(email)
+      User.findOne({ _id: id }).then((user) => {
+        user.email = email;
+        user.save();
 
-        if (valid == true) {
-          User.findOne({ sesion: session }).then((user) => {
-            if (user) {
-              user.email = email;
-              user.save();
-            }
-          });
-          res.json({});
-          console.log(valid);
-          
-        } else {
-          res.json({
-            fulfillmentText: "Por favor ingrese un mail valido e intente de nuevo"
-          })
-        }
-      break;
+        res.json({
+          fulfillmentText: `¿Son estos datos correctos?: Nombre: ${user.nombre} - Dni: ${user.dni} - Ciudad: ${user.ciudad} - Pais: ${user.pais} - Email: ${user.email}`,
+        });
+      });
 
-      case 'retry_email':
-        if (valid == true) {
-          User.findOne({ sesion: session }).then((user) => {
-            if (user) {
-              user.email = email;
-              user.save();
-            }
-          });
-          res.json({});
-          console.log(valid);
-          
-        }
       break;
   }
 });
