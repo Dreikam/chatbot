@@ -48,7 +48,7 @@ const userSchema = mongoose.Schema({
   nombre: String,
   ciudad: String,
   pais: String,
-  dni: Number,
+  dni: String,
   email: String,
   sesion: String,
   fecha: String,
@@ -57,7 +57,7 @@ const userSchema = mongoose.Schema({
 const User = mongoose.model("users", userSchema);
 
 // Aqui empieza el codigo para traer usuarios
-app.get("/users", async (req, res) => {
+app.get("/", async (req, res) => {
   try {
     const users = await User.find({});
     res.json(users);
@@ -105,6 +105,7 @@ app.post("/webhook", (req, res) => {
       break;
 
     case "action_name":
+      
       const name = query.parameters.name;
 
       User.findOne({ _id: id }).then((user) => {
@@ -155,6 +156,51 @@ app.post("/webhook", (req, res) => {
 
       res.json({});
       break;
+
+      // apis
+      case 'bitcoin':
+        let bitcoinfinal = "";
+
+        axios.get("http://api.coindesk.com/v1/bpi/currentprice.json").then(res => {
+          let bitcoinUSD = res.data.bpi.USD.rate;
+
+          
+
+          // console.log(bitcoinUSD);
+          
+            axios.get("https://www.dolarsi.com/api/api.php?type=valoresprincipales").then(res => {              
+              for (let i = 0; i < res.data.length; i++) {
+                const USD = res.data[0].casa.compra;
+
+                // divido la coma del precio dolar para evitar obtener un NaN
+                const splitUSD = USD.split(",");
+                // reemplazo las comas por puntos para evitar obtener un NaN
+                const replacebitcoinUSD = bitcoinUSD.replace("," , ".");
+
+                // divido los numeros en un array de 3 posiciones
+                const splitbitcoinUSD = replacebitcoinUSD.split(".");
+                // Unifico la posificion 0 y 1 para obtener el valor en dolar y dejar de lado el valor de los centavos
+                const unified = splitbitcoinUSD[0] + splitbitcoinUSD[1];
+
+                // convierto los string en numeros float
+                const intUSD = parseFloat(splitUSD);
+                const intbitcoinUSD = parseFloat(unified)
+                // multiplico los numeros para obtener el valor de bitcoin en pesos argentinos
+                bitcoinvalue = intUSD * intbitcoinUSD;
+                
+              }
+              bitcoinfinal = `Una BitCoin vale $ ${bitcoinvalue} Pesos argentinos`;
+              
+              res.json({
+                fulfillmentText: bitcoinfinal
+              })
+              
+
+            })
+        })
+        
+      break;
+
   }
 });
 
